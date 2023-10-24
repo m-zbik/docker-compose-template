@@ -1,0 +1,24 @@
+{
+    "Servers": {
+      "1": {
+        "Name": "__DB_DATA_NAME__",
+        "Group": "__DB_DATA_NAME__",
+        "Host": "__DB_DATA_NAME__",
+        "Port": __DOCKER_POSTGRES_EXPOSE_PORT__,
+        "MaintenanceDB": "__DB_DATA_DB__",
+        "Username": "__DB_DATA_USER__",
+        "Password": "__DB_DATA_PASS__",
+        "SSLMode": "prefer"
+      },
+      "2": {
+        "Name": "__DB_APP_NAME__",
+        "Group": "__DB_APP_NAME__",
+        "Host": "__DB_APP_NAME__",
+        "Port": __DOCKER_POSTGRES_EXPOSE_PORT__,
+        "MaintenanceDB": "__DB_APP_DB__",
+        "Username": "__DB_APP_USER__",
+        "Password": "__DB_APP_PASS__",
+        "SSLMode": "prefer"
+      }
+    }
+  }

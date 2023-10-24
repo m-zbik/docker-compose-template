@@ -1,0 +1,214 @@
+# check composer content with following command
+# docker compose --env-file ./bin/.env config
+version: "3"
+services:
+
+  proxy-gateway:
+    container_name: ${PROXY_GATEWAY_NAME}
+    build: 
+      context: ./proxy-gateway/
+      args:
+          MS_AUTH_NAME_ARG: ${MS_AUTH_NAME}
+          DOCKER_EXPOSE_PORT_ARG: ${DOCKER_EXPOSE_PORT}
+          PROXY_GATEWAY_PORT_ARG: ${PROXY_GATEWAY_PORT}
+    ports:
+      - "${PROXY_GATEWAY_PORT}:${PROXY_GATEWAY_PORT}"
+    depends_on:
+      - $MS_AUTH_NAME 
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${PROXY_GATEWAY_NAME}
+  
+  ms-auth:
+    container_name: ${MS_AUTH_NAME}
+    build: 
+      context: ./ms-auth/
+      args:
+          EXPOSE_PORT_ARG: ${DOCKER_EXPOSE_PORT}
+          DEBUG_ARG: ${DEBUG}
+          GUNICORN_WORKERS_NO_ARG: ${GUNICORN_WORKERS_NO}
+          ROUTE_TO_ARG: LOCALHOST:${PROXY_AUTH_UI_PORT}
+          UI_NAME_ARG: ${UI_NAME}
+    ports:
+      - "${MS_AUTH_PORT}:${DOCKER_EXPOSE_PORT}"
+    volumes:
+      - ./ms-auth/src/main:/src/main
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${MS_AUTH_NAME}
+  
+  proxy-auth-ui:
+    container_name: ${PROXY_AUTH_UI_NAME}
+    build: 
+      context: ./proxy-auth-ui/
+      args:
+          MS_AUTH_NAME_ARG: ${MS_AUTH_NAME}
+          UI_NAME_ARG: ${UI_NAME}
+          UI_PORT_ARG: ${UI_PORT}
+          DOCKER_EXPOSE_PORT_ARG: ${DOCKER_EXPOSE_PORT}
+          PROXY_AUTH_UI_PORT_ARG: ${PROXY_AUTH_UI_PORT}
+    ports:
+      - "${PROXY_AUTH_UI_PORT}:${PROXY_AUTH_UI_PORT}"
+    depends_on:
+      - $MS_AUTH_NAME 
+      - $UI_NAME 
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${PROXY_AUTH_UI_NAME}
+  
+  ui:
+    container_name: ${UI_NAME}
+    build: 
+      context: ./ui/
+      args:
+          MS_UI_NAME_ARG: ${MS_UI_NAME}
+          DOCKER_EXPOSE_PORT_ARG: ${DOCKER_EXPOSE_PORT}
+          UI_PORT_ARG: ${UI_PORT}
+    ports:
+      - "${UI_PORT}:${UI_PORT}"
+    volumes:
+      - ./ui/src/main:/src/main
+    depends_on:
+      - $MS_UI_NAME 
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${UI_NAME}
+  
+  ms-ui:
+    container_name: ${MS_UI_NAME}
+    build: 
+      context: ./ms-ui/
+      args:
+          EXPOSE_PORT_ARG: ${DOCKER_EXPOSE_PORT}
+          DEBUG_ARG: ${DEBUG}
+          GUNICORN_WORKERS_NO_ARG: ${GUNICORN_WORKERS_NO}
+          ROUTE_TO_ARG: localhost:${PROXY_UI_DATA_PORT}
+          MS_DATA_NAME_ARG: ${MS_DATA_NAME}
+    ports:
+      - "${MS_UI_PORT}:${DOCKER_EXPOSE_PORT}"
+    volumes:
+      - ./ms-ui/src/main:/src/main
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${MS_UI_NAME}
+  
+  proxy-ui-data:
+    container_name: ${PROXY_UI_DATA_NAME}
+    build: 
+      context: ./proxy-ui-data/
+      args:
+          MS_DATA_NAME_ARG: ${MS_DATA_NAME}
+          UI_NAME_ARG: ${UI_NAME}
+          UI_PORT_ARG: ${UI_PORT}
+          DOCKER_EXPOSE_PORT_ARG: ${DOCKER_EXPOSE_PORT}
+          PROXY_UI_DATA_PORT_ARG: ${PROXY_UI_DATA_PORT}
+    ports:
+      - "${PROXY_UI_DATA_PORT}:${PROXY_UI_DATA_PORT}"
+    depends_on:
+      - $MS_DATA_NAME 
+      - $UI_NAME 
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${PROXY_UI_DATA_NAME}
+  
+  ms-data:
+    container_name: ${MS_DATA_NAME}
+    build: 
+      context: ./ms-data/
+      args:
+          EXPOSE_PORT_ARG: ${DOCKER_EXPOSE_PORT}
+          DEBUG_ARG: ${DEBUG}
+          GUNICORN_WORKERS_NO_ARG: ${GUNICORN_WORKERS_NO}
+          ROUTE_TO_ARG: LOCALHOST:${PROXY_AUTH_UI_PORT}
+          DB_DATA_NAME_ARG: ${DB_DATA_NAME}
+    ports:
+      - "${MS_DATA_PORT}:${DOCKER_EXPOSE_PORT}"
+    volumes:
+      - ./ms-data/src/main:/src/main
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${MS_DATA_NAME}
+  
+  db-app:
+    container_name: ${DB_APP_NAME}
+    image: postgres:${POSTGRES_VERSION}
+    ports:
+      - "${DB_APP_PORT}:${DOCKER_POSTGRES_EXPOSE_PORT}"
+    volumes:
+      - ./db-app/data:/var/lib/postgresql/data
+      - ./db-app/init/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./db-app/scripts/:/tmp/
+    environment:
+      - POSTGRES_USER=${DB_APP_USER}
+      - POSTGRES_PASSWORD=${DB_APP_PASS}
+      - POSTGRES_DB=${DB_APP_DB}
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${DB_APP_NAME} 
+  
+  db-data:
+    container_name: ${DB_DATA_NAME}
+    image: postgres:${POSTGRES_VERSION}
+    ports:
+      - "${DB_DATA_PORT}:${DOCKER_POSTGRES_EXPOSE_PORT}"
+    volumes:
+      - ./db-data/data:/var/lib/postgresql/data
+      - ./db-data/init/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    environment:
+      - POSTGRES_USER=${DB_DATA_USER}
+      - POSTGRES_PASSWORD=${DB_DATA_PASS}
+      - POSTGRES_DB=${DB_DATA_DB}
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${DB_DATA_NAME} 
+  
+  pgadmin:
+    container_name: ${PGADMIN_NAME}
+    build: 
+      context: ./pgadmin/
+      args:
+          DB_APP_NAME_ARG: ${DB_APP_NAME}
+          DB_APP_PASS_ARG: ${DB_APP_PASS}
+          DB_APP_USER_ARG: ${DB_APP_USER}
+          DB_APP_DB_ARG: ${DB_APP_DB}
+          DB_DATA_NAME_ARG: ${DB_DATA_NAME}
+          DB_DATA_PASS_ARG: ${DB_DATA_PASS}
+          DB_DATA_USER_ARG: ${DB_DATA_USER}
+          DB_DATA_DB_ARG: ${DB_DATA_DB}
+          DOCKER_POSTGRES_EXPOSE_PORT_ARG: ${DOCKER_POSTGRES_EXPOSE_PORT}
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASS}
+    ports:
+      - "${PGADMIN_PORT}:${DOCKER_PGADMIN_EXPOSE_PORT}"
+    depends_on:
+      - ${DB_APP_NAME}
+      - ${DB_DATA_NAME}
+    restart: always
+    networks:
+      data-app-network:
+        aliases:
+          - ${PGADMIN_NAME}
+
+networks:
+  data-app-network:
+    driver: bridge
+     
